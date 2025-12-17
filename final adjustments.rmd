@@ -1,0 +1,974 @@
+---
+title: "TIME SERIES ANALYSIS IN FINANCE"
+subtitle: "Volatility Cycle Analysis of Solana (SOL): ARIMA + GARCH + Regime Detection with Enhanced Diagnostics"
+author: "Dakshan Kulenthiran, Alkiviadis Lazaridis"
+date: "`r Sys.Date()`"
+
+fontsize: 8pt
+
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    latex_engine: xelatex
+    
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    number_sections: true
+    theme: flatly
+    code_folding: hide
+    fig_width: 10
+    fig_height: 6
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE,
+  cache = FALSE,
+  fig.align = 'center'
+)
+options(scipen = 999)
+```
+
+# Introduction
+
+Cryptocurrency markets, particularly Solana (SOL), present unique challenges for time series modeling due to their 24/7 trading, extreme volatility, and susceptibility to sudden regime shifts. This paper analyzes SOL's volatility dynamics using classical econometric methods (ARIMA-GARCH) enhanced with comprehensive residual diagnostics and regime detection.
+The time period chosen is representative of the newest cycle for (SOL) that exhibits regime changes representative of the asset's behavior. 
+Doing this analysis on the whole asset's time series and not breaking it down to parts, goes fundamentally against macro concepts of crypto and would result in spurious outcomes, with the series of methods chosen.
+
+**Research Questions:**
+
+1. Can ARIMA-GARCH models adequately capture SOL's volatility dynamics?
+2. Do distinct volatility regimes exist in SOL markets?
+3. How do liquidity shocks relate to volatility regime transitions?
+4. What are the methodological limitations when applying traditional finance models to cryptocurrency markets?
+
+---
+
+# Literature Review
+
+## Traditional Volatility Modeling
+
+**Engle (1982)** introduced Autoregressive Conditional Heteroskedasticity (ARCH) models, demonstrating that volatility clustering in financial markets can be modeled as a function of past squared returns. **Bollerslev (1986)** extended this to Generalized ARCH (GARCH), which remains the industry standard for volatility forecasting.
+
+**Key findings from traditional finance:**
+
+- Stock market volatility exhibits clustering (high volatility periods follow high volatility)
+- Shocks to volatility persist over time (volatility mean-reversion)
+- Leverage effects exist (negative returns increase volatility more than positive returns)
+
+## Cryptocurrency Market Characteristics
+
+Cryptocurrency markets differ fundamentally from traditional markets:
+
+**24/7 Trading**: Unlike equities, crypto markets never close, eliminating overnight risk premiums but introducing continuous information flow challenges.
+
+**Extreme Tail Events**: Traditional models assume fat-tailed distributions (Student-t), but crypto exhibits "super-fat" tails requiring specialized distributions (e.g., skewed Student-t, GED).
+
+**Regime Instability**: Regulatory announcements, exchange hacks, and network outages cause abrupt structural breaks that violate parameter stability assumptions.
+
+**Liquidity Fragmentation**: Trading occurs across multiple exchanges with varying liquidity, creating microstructure noise not present in centralized markets.
+
+## Methodological Concerns
+
+**Ashraf (2020)** demonstrated that COVID-19 cases Granger-caused stock market declines, but warned against interpreting Granger causality as true causation. This is directly relevant to our regime-liquidity analysis.
+
+**Hansen & Lunde (2005)** showed that complex GARCH specifications often fail to outperform simple GARCH(1,1) in out-of-sample forecasting, suggesting model parsimony is critical.
+
+---
+
+# Methodology
+
+## Data Processing:
+
+- Log returns calculation/
+
+- Time conversion: POSIXct handling for milliseconds vs. datetime
+
+- Aggregation: 1-minute → daily via OHLC resampling
+
+## Stationarity Testing:
+
+- Augmented Dickey-Fuller (ADF) test for unit roots
+
+- ARCH-LM test (Lagrange Multiplier) for heteroskedasticity
+
+## ARIMA Modeling:
+
+- Hyndman-Khandakar algorithm via auto.arima()
+
+- Model selection: AIC minimization
+
+- Ljung-Box test on residuals for serial correlation
+
+## GARCH Modeling:
+
+- GARCH(1,1) as suggested
+
+- Distribution: Student-t for fat tails
+
+- Parameter estimation: Maximum Likelihood via ugarchfit()
+
+## Residual Diagnostics:
+
+- Ljung-Box test at multiple lags (10, 20, 30)
+
+- Jarque-Bera test for normality
+
+- Shapiro-Wilk test (subsampled if n > 5000)
+
+- ARCH-LM test on standardized residuals
+
+- Multiple testing correction: False Discovery Rate (FDR)
+
+## Regime Detection:
+
+- Hidden Markov Model (HMM) via depmixS4
+
+- Gaussian emission probabilities
+
+- 3-state specification (low/medium/high volatility)
+
+- Viterbi algorithm for state decoding
+
+## Liquidity Analysis:
+
+- Volume shock detection: >200% daily change
+
+- Contingency tables with chi-square/Fisher's exact tests
+
+- Monte Carlo simulation for small expected counts
+
+## Statistical Adjustments:
+
+- Multiple testing correction (Bonferroni & FDR)
+
+- Parameter stability checks via recursive estimation
+
+
+## GARCH Modeling for Conditional Volatility
+
+**Why GARCH is Necessary:** ARIMA captures mean dynamics but assumes constant variance. Financial data exhibits volatility clustering—periods of high volatility follow high volatility. GARCH models this explicitly. As described before, a (1,1) approach performs better on average.
+
+**Interpretation:** High volatility regimes have disproportionately more liquidity shocks, but we cannot infer causation due to simultaneity bias and the circular nature of post-hoc regime detection.
+
+# Results
+
+## Summary of Key Findings
+
+### ARIMA Model Performance
+
+The auto-selected ARIMA model successfully captures mean dynamics in SOL returns. Ljung-Box test on ARIMA residuals shows no significant autocorrelation remaining (p > 0.05), indicating the model adequately removed serial dependence. However, ARCH-LM test strongly rejects homoscedasticity, justifying the need for GARCH modeling.
+
+### GARCH Model Performance
+
+GARCH(1,1) with Student-t distribution effectively captures volatility clustering. The persistence parameter (α + β ≈ 0.86) indicates strong volatility memory, with shocks decaying over approximately 7 periods (6-8 trading days). Diagnostic tests confirm that GARCH successfully removed ARCH effects from standardized residuals (ARCH-LM p > 0.05).
+
+### Multiple Testing Correction
+
+After applying FDR correction, only 2 out of 9 tests remain significant: the initial ARCH test (justifying GARCH) and the Jarque-Bera normality test (confirming fat tails). This highlights the importance of multiple testing correction to avoid spurious findings.
+
+### Regime Detection
+
+Three distinct volatility regimes emerge: low (38%), medium (41%), and high (21%). However, these are retrospectively fitted to volatility estimates, limiting predictive validity. The regimes correlate with liquidity shocks but causation cannot be established.
+
+## Comparison to Traditional Finance
+
+SOL exhibits stronger volatility persistence (β ≈ 0.77) compared to typical equity markets (β ≈ 0.85-0.90), suggesting crypto markets have longer volatility memory(FOMO-effect). The Student-t distribution with df ≈ 6.8 indicates fatter tails than traditional assets, though still insufficient to capture extreme events like network outages or exchange collapses.
+
+## Practical Implications
+
+**For Risk Managers:** VaR models based on GARCH-Student-t underestimate tail risk. Supplement with empirical quantiles or Extreme Value Theory for stress testing. Regime-conditional risk limits recommended.
+
+**For Researchers:** Out-of-sample validation critical but not shown due to space constraints. Consider multivariate GARCH with BTC/ETH correlations and on-chain metrics (TVL, active addresses) as exogenous variables.
+
+# Discussion
+
+## Methodological Limitations
+
+**Post-Hoc Regime Detection:** The HMM identifies regimes after observing data, creating circular reasoning. States describe past patterns but lack proven predictive power.
+
+**Volume as Liquidity Proxy:** Trading volume poorly approximates market depth. High volume can occur during crashes (low liquidity) or wash trading (artificial liquidity). Bid-ask spread and order book depth are superior measures but unavailable for this specific paper.
+
+**Parameter Instability:** GARCH assumes constant parameters over the entire sample. Crypto markets evolve rapidly through regulatory changes, exchange failures, and network upgrades, violating this assumption. Rolling window estimation recommended but not implemented.
+
+**Omitted Variables:** The model excludes macro events (Fed announcements), crypto-specific shocks (regulatory news), and on-chain metrics (validator health, TVL). These omissions bias estimates and limit causal inference.
+
+# Conclusion
+
+This analysis demonstrates that classical ARIMA-GARCH methods can be applied to cryptocurrency markets with appropriate modifications. GARCH(1,1) with Student-t distribution adequately captures volatility clustering in SOL, though fat-tail events remain problematic. Three volatility regimes exist but are retrospectively identified, limiting predictive utility.
+
+**Key Takeaways:**
+
+1. **GARCH works for crypto** but requires robust distributions (Student-t minimum, skewed-t preferred)
+2. **Multiple testing correction is essential** to avoid false discoveries (reduced significance from 28% to 11%)
+3. **Regime detection requires caution** due to post-hoc fitting and circular reasoning. Used to verify macro theory ;altcoins following BTC halving market cycles.
+4. **Liquidity proxies are crude** and volume ≠ market depth.
+5. **Out-of-sample validation is critical** before deploying models for trading or risk management.
+
+**Final Thought:** The best model honestly acknowledges its limitations. Our analysis provides a framework for SOL volatility modeling while highlighting methodological biases inherent in applying traditional finance methods to crypto-currency markets.
+
+# References
+
+1. Ashraf, B. N. (2020). Stock markets' reaction to COVID-19: Cases or fatalities? *Research in International Business and Finance*, 54, 101249.
+
+2. Bollerslev, T. (1986). Generalized autoregressive conditional heteroskedasticity. *Journal of Econometrics*, 31(3), 307-327.
+
+3. Engle, R. F. (1982). Autoregressive conditional heteroscedasticity with estimates of the variance of United Kingdom inflation. *Econometrica*, 50(4), 987-1007.
+
+4. Hansen, P. R., & Lunde, A. (2005). A forecast comparison of volatility models: does anything beat a GARCH(1,1)? *Journal of Applied Econometrics*, 20(7), 873-889.
+
+---
+
+**Analysis Date:** `r Sys.Date()`  
+**R Version:** `r R.version.string`
+
+---
+
+*This analysis is for educational purposes only. Not financial advice.*
+---
+
+# Code Charts and tables shown below.
+```{r load-packages}
+# Data manipulation
+library(data.table)
+library(dplyr)
+library(tidyr)
+library(lubridate)
+
+# Time series
+library(xts)
+library(zoo)
+library(forecast)
+library(rugarch)
+
+# Visualization
+library(ggplot2)
+library(gridExtra)
+library(vioplot)
+
+# Statistical tests
+library(lmtest)
+library(tseries)
+library(FinTS)
+
+# Regime detection
+library(depmixS4)
+
+# Additional utilities
+library(moments)
+library(knitr)
+```
+
+## Data Collection and Preprocessing
+
+**Data Source:** Binance 1-minute OHLCV data for SOL/USDT  
+**Time Period:** Multiple years of historical data  
+**Frequency:** Aggregated to daily intervals to reduce microstructure noise.
+
+**Preprocessing Steps:**
+
+ Calculate log returns: $r_t = \ln(P_t) - \ln(P_{t-1})$
+
+```{r load-data}
+# Load RDS file
+df <- readRDS("sol_usdt_tibble.rds")
+df <- as_tibble(df)
+
+# Convert timestamps
+if("open_time" %in% names(df)){
+  if(is.numeric(df$open_time[1])){
+    df <- df %>% 
+      mutate(timestamp = as.POSIXct(open_time/1000, origin="1970-01-01", tz="UTC"))
+  } else {
+    df <- df %>% 
+      mutate(timestamp = open_time)
+  }
+} else {
+  stop("open_time column not found in data")
+}
+
+# Select OHLCV columns
+model_df <- df %>% 
+  dplyr::select(timestamp, open, high, low, close, volume) %>%
+  dplyr::arrange(timestamp) %>%
+  dplyr::filter(!is.na(close))
+
+# Summary table
+data_summary <- data.frame(
+  Metric = c("Rows loaded", "Start date", "End date"),
+  Value = c(nrow(model_df), 
+            as.character(min(model_df$timestamp)),
+            as.character(max(model_df$timestamp)))
+)
+
+kable(data_summary, caption = "Data Loading Summary")
+```
+
+```{r aggregate-data}
+
+model_df <- model_df %>%
+  mutate(period = floor_date(timestamp, "1 day"))
+
+df_agg <- model_df %>%
+  dplyr::group_by(period) %>%
+  dplyr::summarise(
+    open = first(open),
+    high = max(high),
+    low = min(low),
+    close = last(close),
+    volume = sum(volume)
+  ) %>%
+  dplyr::rename(timestamp = period)
+
+# Convert to xts
+price_xts <- xts(df_agg$close, order.by=df_agg$timestamp)
+vol_xts <- xts(df_agg$volume, order.by=df_agg$timestamp)
+
+```
+
+## Descriptive Analysis: Visualization
+
+``` {r plot-price}
+fig.cap="Figure 1: SOL/USDT price over time showing major regime transitions"
+plot(price_xts, 
+     main="SOL/USDT Price Time Series", 
+     ylab="Price (USD)",
+     col="steelblue",
+     lwd=1.5)
+grid()
+```
+
+**Key Observations:**
+
+- Extreme volatility spikes during market crashes (FTX collapse).
+- Apparent clustering of high volatility periods.
+- Non-constant variance (heteroscedasticity) visible in raw price series.
+
+```{r calculate-returns}
+# Calculate log returns
+rets <- diff(log(coredata(price_xts)))
+rets_xts <- xts(rets, order.by=index(price_xts)[-1])
+colnames(rets_xts) <- "logret"
+
+# Return statistics with scientific notation for very small values
+return_stats <- data.frame(
+  Statistic = c("Minimum", "1st Quartile", "Median", "Mean", 
+                "3rd Quartile", "Maximum", "Skewness", "Kurtosis"),
+  Value = c(
+    sprintf("%.6f", min(rets_xts, na.rm=TRUE)),
+    sprintf("%.6f", quantile(rets_xts, 0.25, na.rm=TRUE)),
+    sprintf("%.6f", median(rets_xts, na.rm=TRUE)),
+    sprintf("%.6f", mean(rets_xts, na.rm=TRUE)),
+    sprintf("%.6f", quantile(rets_xts, 0.75, na.rm=TRUE)),
+    sprintf("%.6f", max(rets_xts, na.rm=TRUE)),
+    sprintf("%.4f", skewness(rets_xts)),
+    sprintf("%.4f", kurtosis(rets_xts))
+  )
+)
+
+kable(return_stats, caption = "Table 1: Return Statistics")
+```
+
+```{r plot-returns, fig.cap="Figure 2: SOL log returns showing volatility clustering"}
+par(mfrow=c(1,2))
+
+# Violin plot
+vioplot(as.numeric(rets_xts),
+        main="Return Distrib./Violin Plot",
+      
+        col="lightblue",
+        rectCol="darkblue",
+        colMed="red")
+text(1, max(rets_xts, na.rm=TRUE)*0.9,
+     paste("Kurtosis:", sprintf("%.2f", kurtosis(rets_xts))),
+     pos=1, col="darkred")
+
+# Boxplot (middle 98%)
+middle_rets <- rets_xts[rets_xts > quantile(rets_xts, 0.01) & 
+                        rets_xts < quantile(rets_xts, 0.99)]
+boxplot(as.numeric(middle_rets),
+        main="Middle 98% of Returns",
+        ylab="Return",
+        col="lightgreen",
+        outline=FALSE)
+
+par(mfrow=c(1,1))
+```
+
+**Distributional Characteristics:**
+
+- **Mean:** Close to zero (expected for returns)
+- **Kurtosis:** Significantly > 3 (leptokurtic, fat tails)
+- **Skewness:** Slightly positive (larger right tail)
+- **Tail Risk:** Multiple observations beyond ±4 standard deviations
+
+## Stationarity Testing
+
+**Why Stationarity Matters:** Time series models (ARIMA, GARCH) assume weak stationarity: constant mean, variance, and autocovariance over time. Non-stationary series lead to spurious regression and invalid inference.
+
+```{r stationarity-tests}
+# ADF tests
+adf_price <- adf.test(price_xts)
+adf_returns <- adf.test(rets_xts)
+adf_squared <- adf.test(rets_xts^2)
+
+# Create formatted table
+stationarity_results <- data.frame(
+  Series = c("Price Levels", "Log Returns", "Squared Returns"),
+  ADF = c(
+    sprintf("%.4f", adf_price$statistic),
+    sprintf("%.4f", adf_returns$statistic),
+    sprintf("%.4f", adf_squared$statistic)
+  ),
+  p_value = c(
+    format.pval(adf_price$p.value, digits=2),
+    format.pval(adf_returns$p.value, digits=2),
+    format.pval(adf_squared$p.value, digits=2)
+  ),
+  Interpretation = c(
+    ifelse(adf_price$p.value < 0.05, "Stationary", "Non-Stationary"),
+    ifelse(adf_returns$p.value < 0.05, "Stationary", "Non-Stationary"),
+    "Stationary (confirms ARCH)"
+  ),
+  Action = c(
+    "Take first difference",
+    "Proceed to modeling",
+    "Apply GARCH"
+  )
+)
+
+kable(stationarity_results, caption = "Table 1: Stationarity Test Results")
+```
+
+**Critical Finding:** Crypto and traditional equity log returns both generally appear stationary (I(0)) in the ADF test sense, allowing for direct modeling of returns without further differencing. The significant ADF test on squared returns indicates volatility clustering, supporting GARCH-type models—a feature common in both asset classes.
+
+## Test for Autocorrelation and ARCH Effects
+
+```{r acf-plots, fig.cap="Figure 3: ACF and PACF plots for returns and squared returns"}
+par(mfrow=c(2,2))
+acf(coredata(rets_xts), main="ACF of Returns", lag.max=40,ylim=c(-0.15,0.15))
+pacf(coredata(rets_xts), main="PACF of Returns", lag.max=40)
+acf(coredata(rets_xts)^2, main="ACF of Squared Returns", lag.max=40, ylim=c(-0.15,0.15))
+pacf(coredata(rets_xts)^2, main="PACF of Squared Returns", lag.max=40)
+par(mfrow=c(1,1))
+```
+
+```{r arch-test-initial}
+# ARCH test
+arch_test_initial <- ArchTest(coredata(rets_xts), lags=12)
+
+arch_results <- data.frame(
+  Test = "ARCH-LM Test on Returns",
+  Lag = 12,
+  Chi_squared = sprintf("%.4f", arch_test_initial$statistic),
+  p_value = format.pval(arch_test_initial$p.value,digits=3, eps=1e-10),
+  Interpretation = ifelse(arch_test_initial$p.value < 0.001,
+                         "STRONG ARCH EFFECTS (GARCH needed)",
+                         "No ARCH effects")
+)
+
+kable(arch_results, caption = "Table 3: ARCH Effects Test")
+```
+
+**Interpretation:** Massive ARCH effects present. Residuals exhibit significant volatility clustering. This **justifies GARCH modeling**.
+
+## ARIMA Modeling for Mean Dynamics
+
+**Model Selection:** Use `auto.arima()` with AIC criterion for automatic model selection.
+
+**ARIMA Model Structure:**
+$$r_t = \mu + \sum_{i=1}^{p} \phi_i r_{t-i} + \sum_{j=1}^{q} \theta_j \epsilon_{t-j} + \epsilon_t$$
+
+```{r arima-fit}
+# Fit ARIMA
+fit_arima <- auto.arima(
+  coredata(rets_xts),
+  seasonal = FALSE,
+  stepwise = FALSE,
+  approximation = FALSE,
+  trace = FALSE,
+  ic = "aic"
+)
+
+# Model summary
+arima_order <- arimaorder(fit_arima)
+arima_info <- data.frame(
+  Component = c("Model", "AIC", "BIC", "Log Likelihood"),
+  Value = c(
+    paste0("ARIMA(", arima_order[1], ",", arima_order[2], ",", arima_order[3], ")"),
+    sprintf("%.4f", AIC(fit_arima)),
+    sprintf("%.4f", BIC(fit_arima)),
+    sprintf("%.4f", logLik(fit_arima))
+  )
+)
+
+kable(arima_info, caption = "Table 4: Selected ARIMA Model")
+
+# Extract residuals
+resid_arima <- residuals(fit_arima)
+resid_xts <- xts(resid_arima, order.by=index(rets_xts))
+```
+
+```{r arima-diagnostics}
+# Ljung-Box test
+lb_test <- Box.test(resid_arima, lag=24, type="Ljung-Box")
+
+ljung_box_results <- data.frame(
+  Test = "Ljung-Box Test on ARIMA Residuals",
+  Lag = 24,
+  Chi_squared = sprintf("%.4f", lb_test$statistic),
+  p_value = format.pval(lb_test$p.value, digits=4),
+  Interpretation = ifelse(lb_test$p.value > 0.05,
+                         "Residuals are white noise",
+                         "Some autocorrelation remains")
+)
+
+kable(ljung_box_results, caption = "Table 5: ARIMA Residual Diagnostics")
+```
+
+```{r plot-arima-residuals, fig.cap="Figure 4: ARIMA residuals and diagnostics"}
+par(mfrow=c(2,2))
+
+plot(as.numeric(resid_xts), 
+     main="ARIMA Residuals", 
+     ylab="Residuals", 
+     xlab="Index",
+     type="l")
+abline(h=0, col="red", lty=2)
+
+acf(resid_arima, main="ACF of ARIMA Residuals" ,ylim=c(-0.1, 0.1))
+
+hist(resid_arima, breaks=50, 
+     main="Histogram of Residuals", 
+     col="lightblue", 
+     xlab="ARIMA Residuals",
+     xlim=c(-0.1, 0.1))
+
+qqnorm(resid_arima)
+qqline(resid_arima, col="red")
+
+par(mfrow=c(1,1))
+```
+
+
+**GARCH(1,1) Specification:**
+$$\sigma_t^2 = \omega + \alpha \epsilon_{t-1}^2 + \beta \sigma_{t-1}^2$$
+
+```{r garch-fit}
+# Define GARCH spec
+spec <- ugarchspec(
+  variance.model = list(model="sGARCH", garchOrder=c(1,1)),
+  mean.model = list(armaOrder=c(0,0), include.mean=FALSE),
+  distribution.model = "std"
+)
+
+# Fit GARCH
+gfit <- ugarchfit(spec=spec, data=resid_arima, solver="hybrid")
+
+# Extract volatility and residuals
+sigma_t <- sigma(gfit)
+vol_series <- xts(sigma_t, order.by=index(rets_xts))
+z <- residuals(gfit, standardize=TRUE)
+```
+
+```{r garch-params}
+# Extract parameters
+garch_coef <- coef(gfit)
+alpha_beta_sum <- garch_coef["alpha1"] + garch_coef["beta1"]
+
+garch_params <- data.frame(
+  Parameter = c("ω (omega)", "α (alpha1)", "β (beta1)", 
+                "α + β", "Shape (df)", "Half-life of shocks"),
+  Value = c(
+    sprintf("%.5f", garch_coef["omega"]),
+    sprintf("%.5f", garch_coef["alpha1"]),
+    sprintf("%.5f", garch_coef["beta1"]),
+    sprintf("%.5f", alpha_beta_sum),
+    sprintf("%.5f", garch_coef["shape"]),
+    sprintf("%.2f", 1/(1-alpha_beta_sum))
+  ),
+  Interpretation = c(
+    "Long-run variance",
+    "Shock persistence",
+    "Volatility persistence",
+    ifelse(alpha_beta_sum < 1, "Stationary", "Non-stationary"),
+    "Student-t degrees of freedom",
+    "Periods"
+  )
+)
+
+kable(garch_params, caption = "Table 6: GARCH(1,1) Model Parameters")
+```
+
+```{r plot-garch-vol, fig.cap="Figure 5: GARCH conditional volatility"}
+plot(vol_series,
+     main="GARCH Conditional Volatility (σ)",
+     ylab="Volatility",
+     col="darkred",
+     lwd=1.5)
+grid()
+```
+
+**Interpretation:**
+
+- High beta indicates **long memory** in volatility
+- Low degrees of freedom confirms **fat tails**
+- Volatility shocks persist for extended periods
+
+## Enhanced Residual Diagnostics
+
+This is where our analysis diverges from traditional approaches. We implement comprehensive diagnostics to detect model misspecification.
+
+---
+
+### Autocorrelation Tests
+
+```{r residual-autocorr-tests}
+lb_lags <- c(10, 20, 30)
+lb_results <- data.frame()
+lb_sq_results <- data.frame()
+
+# Test on standardized residuals
+for(lag in lb_lags){
+  lb <- Box.test(z, lag=lag, type="Ljung-Box")
+  lb_results <- rbind(lb_results, data.frame(
+    Lag = lag,
+    Statistic = sprintf("%.4f", lb$statistic),
+    p_value = format.pval(lb$p.value, digits=4),
+    Result = ifelse(lb$p.value > 0.05, "✓ Pass", "✗ Reject")
+  ))
+}
+
+# Test on squared standardized residuals
+for(lag in lb_lags){
+  lb <- Box.test(z^2, lag=lag, type="Ljung-Box")
+  lb_sq_results <- rbind(lb_sq_results, data.frame(
+    Lag = lag,
+    Statistic = sprintf("%.4f", lb$statistic),
+    p_value = format.pval(lb$p.value, digits=4),
+    Result = ifelse(lb$p.value > 0.05, "✓ No ARCH", "✗ ARCH remains")
+  ))
+}
+
+all_lb_results <- rbind(lb_results, lb_sq_results)
+kable(all_lb_results, caption = "Table 7: Autocorrelation Tests on GARCH Residuals")
+```
+
+### Normality Tests
+
+```{r normality-tests}
+z_clean <- as.numeric(na.omit(z))
+
+# Shapiro-Wilk (subsample if large)
+if(length(z_clean) > 5000){
+  set.seed(123)
+  sw <- shapiro.test(sample(z_clean, 5000))
+  sw_label <- "Shapiro-Wilk (N=5000 sample)"
+} else {
+  sw <- shapiro.test(z_clean)
+  sw_label <- "Shapiro-Wilk"
+}
+
+# Jarque-Bera
+jb <- jarque.bera.test(z_clean)
+
+normality_tests <- data.frame(
+  Test = c(sw_label, "Jarque-Bera"),
+  Statistic = c(sprintf("%.4f", sw$statistic), sprintf("%.4f", jb$statistic)),
+  p_value = c(format.pval(sw$p.value, eps=1e-10), format.pval(jb$p.value, eps=1e-20)),
+  Interpretation = c(
+    ifelse(sw$p.value < 0.05, "Non-normal", "Normal"),
+    ifelse(jb$p.value < 0.05, "Non-normal", "Normal")
+  )
+)
+
+kable(normality_tests, caption = "Table 8: Normality Tests on Standardized Residuals")
+```
+
+### Heteroscedasticity Tests
+
+```{r heteroskedasticity-tests}
+arch_std <- ArchTest(z, lags=12)
+
+arch_test_result <- data.frame(
+  Test = "ARCH-LM Test (12 lags)",
+  Chi_squared = sprintf("%.4f", arch_std$statistic),
+  p_value = format.pval(arch_std$p.value, digits=4),
+  Interpretation = ifelse(arch_std$p.value > 0.05, 
+                         "GARCH captured ARCH", 
+                         "ARCH remains")
+)
+
+kable(arch_test_result, caption = "Table 9: Test for Remaining ARCH Effects")
+```
+
+### Multiple Testing Correction
+
+```{r multiple-testing}
+# Collect all p-values
+all_pvals <- c(
+  as.numeric(gsub("[<>]", "", lb_results$p_value)),
+  as.numeric(gsub("[<>]", "", lb_sq_results$p_value)),
+  sw$p.value,
+  jb$p.value,
+  arch_std$p.value
+)
+
+n_tests <- length(all_pvals)
+bonf_alpha <- 0.05 / n_tests
+fdr_adjusted <- p.adjust(all_pvals, method="BH")
+
+multiple_testing_results <- data.frame(
+  Metric = c("Total tests conducted", 
+             "Expected false positives at α=0.05",
+             "Bonferroni-corrected α",
+             "Tests significant at Bonferroni level",
+             "Tests significant at FDR q=0.05"),
+  Value = c(
+    n_tests,
+    sprintf("%.2f", n_tests * 0.05),
+    format(bonf_alpha, scientific=TRUE, digits=3),
+    sum(all_pvals < bonf_alpha, na.rm=TRUE),
+    sum(fdr_adjusted < 0.05, na.rm=TRUE)
+  )
+)
+
+kable(multiple_testing_results, caption = "Table 10: Multiple Testing Correction")
+```
+
+### Effect Size Measures
+
+```{r effect-sizes}
+max_acf_z <- max(abs(acf(z, lag.max=20, plot=FALSE)$acf[-1]))
+max_acf_z2 <- max(abs(acf(z^2, lag.max=20, plot=FALSE)$acf[-1]))
+
+effect_sizes <- data.frame(
+  Metric = c("Mean", "Standard Deviation", "Skewness", "Kurtosis", 
+             "Max |ACF| (lags 1-20)", "Max |ACF| of z² (lags 1-20)"),
+  Value = c(
+    sprintf("%.6f", mean(z, na.rm=TRUE)),
+    sprintf("%.6f", sd(z, na.rm=TRUE)),
+    sprintf("%.4f", skewness(z, na.rm=TRUE)),
+    sprintf("%.4f", kurtosis(z, na.rm=TRUE)),
+    sprintf("%.4f", max_acf_z),
+    sprintf("%.4f", max_acf_z2)
+  ),
+  Target = c("≈ 0", "≈ 1", "0 (symmetric)", "3 (normal)", "< 0.1", "Small")
+)
+
+kable(effect_sizes, caption = "Table 11: Effect Size Measures for Standardized Residuals")
+```
+
+```{r garch-diagnostic-plot, fig.cap="Figure 6: GARCH standardized residual diagnostics", fig.height=8}
+par(mfrow=c(2,2))
+
+# Time series
+plot(as.numeric(z), 
+     main="Standardized Residuals", 
+     type="l", 
+     ylab="Std Residuals",
+     ylim=c(-5, 5))
+abline(h=0, col="red", lty=2)
+abline(h=c(-2,2), col="orange", lty=2)
+
+# ACF
+acf(as.numeric(z), main="ACF of Std Residuals", lag.max=40, ylim=c(-0.2, 0.2))
+
+# ACF squared
+acf(as.numeric(z^2), main="ACF of Squared Std Residuals", lag.max=40, ylim=c(-0.2, 0.2))
+
+# QQ plot
+qqnorm(z, main="Q-Q Plot of Std Residuals")
+qqline(z, col="red")
+
+par(mfrow=c(1,1))
+```
+
+**Interpretation:** GARCH(1,1) with Student-t successfully captures most volatility clustering. Remaining deviations are extreme tail events that no parametric model can fully capture.
+
+## Regime Detection via Hidden Markov Models
+
+**Motivation:** Visual inspection suggests SOL volatility exhibits distinct regimes (low, medium, high). We formalize this with HMM.
+
+```{r hmm-regime-detection}
+# Prepare HMM data
+logvol <- log(coredata(vol_series) + 1e-12)
+hmm_data <- data.frame(logvol=as.numeric(logvol))
+
+# Fit 3-state HMM
+nstate <- 3
+mod <- depmix(response=logvol ~ 1, family=gaussian(), nstates=nstate, data=hmm_data)
+set.seed(123)
+fm <- fit(mod, verbose=FALSE)
+
+# Extract states
+states <- posterior(fm)$state
+regimes_xts <- xts(states, order.by=index(vol_series))
+
+# Regime distribution
+regime_dist <- as.data.frame(table(states))
+regime_dist$Percentage <- sprintf("%.2f", regime_dist$Freq / sum(regime_dist$Freq) * 100)
+colnames(regime_dist) <- c("Regime", "Frequency", "Percentage")
+
+kable(regime_dist, caption = "HMM Regime Distribution")
+```
+
+**Critical Bias Warning:** This is **post-hoc regime detection** fitted to volatility estimates. This creates endogeneity and circular reasoning.
+
+```{r plot-regimes, fig.cap="Figure 7: GARCH volatility colored by HMM regime", fig.height=6}
+# Create plot
+plot_df <- data.frame(
+  datetime = index(vol_series),
+  sigma = as.numeric(coredata(vol_series)),
+  regime = factor(as.numeric(coredata(regimes_xts)))
+)
+
+ggplot(plot_df, aes(x=datetime, y=sigma)) +
+  geom_line(aes(color=regime), linewidth=0.5) +
+  scale_color_manual(
+    values=c("1"="green3", "2"="orange", "3"="red"),
+    labels=c("State 1 (Low Vol)", "State 2 (Med Vol)", "State 3 (High Vol)")
+  ) +
+  labs(
+    title="GARCH Volatility with HMM Regimes",
+    x="Date",
+    y="Conditional Volatility (σ)",
+    color="Regime"
+  ) +
+  theme_minimal() +
+  theme(legend.position="bottom")
+
+```
+
+
+## Liquidity Shock Analysis
+
+**Liquidity Proxy:** We use **volume** as a crude liquidity measure, acknowledging its limitations.
+
+```{r liquidity-analysis}
+# Create volume dataframe
+vol_df <- data.frame(
+  datetime = index(vol_xts),
+  volume = as.numeric(coredata(vol_xts))
+)
+
+# Calculate volume percent change
+vol_df <- vol_df %>%
+  mutate(
+    vol_pct = (volume/lag(volume) - 1) * 100,
+    vol_ma = zoo::rollapply(
+      volume,
+      width=60,
+      FUN=mean,
+      fill=NA,
+      align="right"
+    )
+  )
+
+# Define liquidity shock
+liq_thresh_pct <- 200
+vol_df <- vol_df %>%
+  mutate(liq_shock = abs(vol_pct) > liq_thresh_pct)
+
+liquidity_summary <- data.frame(
+  Metric = c("Liquidity shocks detected", 
+             "Percentage of periods with shocks",
+             "Threshold for shock detection"),
+  Value = c(
+    sum(vol_df$liq_shock, na.rm=TRUE),
+    paste0(round(mean(vol_df$liq_shock, na.rm=TRUE)*100, 2), "%"),
+    paste0(liq_thresh_pct, "% volume change")
+  )
+)
+
+kable(liquidity_summary, caption = "Liquidity Shock Detection Summary")
+```
+
+### Regime-Liquidity Association
+
+```{r regime-liquidity}
+# Merge regimes with liquidity
+combined <- data.frame(
+  datetime = index(vol_series),
+  sigma = as.numeric(coredata(vol_series)),
+  regime = as.numeric(coredata(regimes_xts))
+) %>%
+  dplyr::left_join(vol_df, by="datetime")
+
+# Contingency table
+ct <- combined %>%
+  dplyr::select(regime, liq_shock) %>%
+  tidyr::drop_na() %>%
+  with(table(Regime = regime, LiqShock = liq_shock))
+
+
+# Calculate percentages
+ct_percent <- prop.table(ct, margin = 1) * 100
+
+contingency_table <- as.data.frame.matrix(ct)
+contingency_table$Regime <- rownames(contingency_table)
+contingency_table <- contingency_table[, c("Regime", "FALSE", "TRUE")]
+colnames(contingency_table) <- c("Regime", "No Shock", "Shock")
+
+kable(contingency_table, caption = "Regime vs Liquidity Shock Contingency Table")
+```
+
+```{r contingency-table}
+kable(addmargins(ct), 
+      caption = "Contingency Table - Regime vs Liquidity Shock")
+```
+
+```{r chi-square-test}
+# Chi-square test
+expected <- chisq.test(ct)$expected
+test_selection <- ifelse(any(expected < 5), "Fisher's Exact", "Chi-square")
+
+if(any(expected < 5)){
+  fisher_test <- fisher.test(ct, simulate.p.value=TRUE, B=10000)
+  association_test <- data.frame(
+    Test = "Fisher's Exact Test (Monte Carlo)",
+    Statistic = "N/A",
+    p_value = format.pval(fisher_test$p.value, digits = 4),
+    Interpretation = ifelse(fisher_test$p.value < 0.05, 
+                           "Significant association", 
+                           "No significant association")
+  )
+} else {
+  chi_test <- chisq.test(ct)
+  association_test <- data.frame(
+    Test = "Chi-square Test",
+    Statistic = round(chi_test$statistic, 4),
+    p_value = format.pval(chi_test$p.value, digits = 4),
+    Interpretation = ifelse(chi_test$p.value < 0.05, 
+                           "Significant association", 
+                           "No significant association")
+  )
+}
+
+kable(association_test, caption = "Association Test between Regime and Liquidity Shocks")
+```
+```{r}
+summary(fm)
+```
+
+
+```{r}
+#kable(tl,digits=2.,caption = "example table")
+```
+
+
+```{r}
+#library(broom)
+#tidy(lm(mpg ~ wt + hp, data=mtcars))
+#zt<-glance(lm(mpg ~ wt + hp, data=mtcars))
+#kable(zt)
+
+```
+
+
