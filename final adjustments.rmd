@@ -372,7 +372,7 @@ return_stats <- data.frame(
   )
 )
 
-kable(return_stats, caption = "Table 1: Return Statistics")
+kable(return_stats, caption = "Return Statistics")
 ```
 
 ```{r plot-returns, fig.cap="Figure 2: SOL log returns showing volatility clustering"}
@@ -443,7 +443,7 @@ stationarity_results <- data.frame(
   )
 )
 
-kable(stationarity_results, caption = "Table 1: Stationarity Test Results")
+kable(stationarity_results, caption = "Stationarity Test Results")
 ```
 
 **Critical Finding:** Crypto and traditional equity log returns both generally appear stationary (I(0)) in the ADF test sense, allowing for direct modeling of returns without further differencing. The significant ADF test on squared returns indicates volatility clustering, supporting GARCH-type models—a feature common in both asset classes.
@@ -473,7 +473,7 @@ arch_results <- data.frame(
                          "No ARCH effects")
 )
 
-kable(arch_results, caption = "Table 3: ARCH Effects Test")
+kable(arch_results, caption = "ARCH Effects Test")
 ```
 
 **Interpretation:** Massive ARCH effects present. Residuals exhibit significant volatility clustering. This **justifies GARCH modeling**.
@@ -508,7 +508,7 @@ arima_info <- data.frame(
   )
 )
 
-kable(arima_info, caption = "Table 4: Selected ARIMA Model")
+kable(arima_info, caption = "Selected ARIMA Model")
 
 # Extract residuals
 resid_arima <- residuals(fit_arima)
@@ -529,7 +529,7 @@ ljung_box_results <- data.frame(
                          "Some autocorrelation remains")
 )
 
-kable(ljung_box_results, caption = "Table 5: ARIMA Residual Diagnostics")
+kable(ljung_box_results, caption = "ARIMA Residual Diagnostics")
 ```
 
 ```{r plot-arima-residuals, fig.cap="Figure 4: ARIMA residuals and diagnostics"}
@@ -603,7 +603,7 @@ garch_params <- data.frame(
   )
 )
 
-kable(garch_params, caption = "Table 6: GARCH(1,1) Model Parameters")
+kable(garch_params, caption = "GARCH(1,1) Model Parameters")
 ```
 
 ```{r plot-garch-vol, fig.cap="Figure 5: GARCH conditional volatility"}
@@ -657,7 +657,7 @@ for(lag in lb_lags){
 }
 
 all_lb_results <- rbind(lb_results, lb_sq_results)
-kable(all_lb_results, caption = "Table 7: Autocorrelation Tests on GARCH Residuals")
+kable(all_lb_results, caption = "Autocorrelation Tests on GARCH Residuals")
 ```
 
 ### Normality Tests
@@ -688,7 +688,7 @@ normality_tests <- data.frame(
   )
 )
 
-kable(normality_tests, caption = "Table 8: Normality Tests on Standardized Residuals")
+kable(normality_tests, caption = "Normality Tests on Standardized Residuals")
 ```
 
 ### Heteroscedasticity Tests
@@ -705,7 +705,7 @@ arch_test_result <- data.frame(
                          "ARCH remains")
 )
 
-kable(arch_test_result, caption = "Table 9: Test for Remaining ARCH Effects")
+kable(arch_test_result, caption = "Test for Remaining ARCH Effects")
 ```
 
 ### Multiple Testing Correction
@@ -739,7 +739,7 @@ multiple_testing_results <- data.frame(
   )
 )
 
-kable(multiple_testing_results, caption = "Table 10: Multiple Testing Correction")
+kable(multiple_testing_results, caption = "Multiple Testing Correction")
 ```
 
 ### Effect Size Measures
@@ -762,7 +762,7 @@ effect_sizes <- data.frame(
   Target = c("≈ 0", "≈ 1", "0 (symmetric)", "3 (normal)", "< 0.1", "Small")
 )
 
-kable(effect_sizes, caption = "Table 11: Effect Size Measures for Standardized Residuals")
+kable(effect_sizes, caption = "Effect Size Measures for Standardized Residuals")
 ```
 
 ```{r garch-diagnostic-plot, fig.cap="Figure 6: GARCH standardized residual diagnostics", fig.height=8}
