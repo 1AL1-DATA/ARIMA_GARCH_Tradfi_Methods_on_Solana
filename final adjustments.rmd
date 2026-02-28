@@ -971,4 +971,6 @@ summary(fm)
 
 ```
 
+The analysis reveals a clean separation between two fundamental market dimensions in the dataset: volatility regimes (from GARCH) are unrelated to volume‑based liquidity shocks. It suggests that to understand liquidity events, you need to look beyond volatility dynamics—perhaps at order book data, on‑chain metrics, or sentiment indicators.
 
+P‑value of 0.5945 tells us that in the  dataset, the probability of a volume shock is roughly the same (~2%) regardless of whether the market is in a low‑, medium‑, or high‑volatility regime. This is a valid empirical observation.
