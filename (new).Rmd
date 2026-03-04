@@ -1,6 +1,6 @@
 ---
 title: "Machine Learning and Predictive Modeling"
-author: "Caspar Alina, Lazaridis Alkiviadis, Ruoss Lukas"
+author: 
 date: "`r Sys.Date()`"
 output:
   word_document:
